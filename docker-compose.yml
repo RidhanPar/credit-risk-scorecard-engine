@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  scorecard:
+    build: .
+    container_name: credit_risk_scorecard
+    ports:
+      - "8501:8501"
+    volumes:
+      # Persist SQLite DB and trained models between container restarts
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./assets:/app/assets
+    environment:
+      - DB_PATH=data/credit_risk.db
+      - SCORECARD_MODEL_PATH=models/scorecard_model.pkl
+      - XGB_MODEL_PATH=models/xgb_model.pkl
+      - BINNING_PROCESS_PATH=models/binning_process.pkl
+      - PDO=20
+      - BASE_SCORE=600
+      - BASE_ODDS=1.0
+    restart: unless-stopped
