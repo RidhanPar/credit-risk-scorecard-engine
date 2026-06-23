@@ -1,0 +1,12 @@
+.git
+.gitignore
+.venv
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+notebooks/
+tests/
+.env
+README.md
+assets/screenshots/

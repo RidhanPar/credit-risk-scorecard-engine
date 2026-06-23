@@ -36,9 +36,6 @@ models/*.pkl
 Thumbs.db
 desktop.ini
 
-# Docker
-.dockerignore
-
 # Coverage
 .coverage
 htmlcov/
