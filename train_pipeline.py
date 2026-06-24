@@ -32,7 +32,7 @@ from src.evaluation import (
 from src.feature_engineering import fit_binning_process, transform_woe
 from src.monitoring import calculate_psi, plot_psi_summary
 from src.scorecard import predict_scores, train_scorecard
-from src.xgb_model import get_feature_importance, predict_proba_xgb, train_xgb_model
+from src.xgb_model import compute_shap_analysis, get_feature_importance, predict_proba_xgb, train_xgb_model
 
 logging.basicConfig(
     level=logging.INFO,
@@ -106,6 +106,13 @@ def main() -> None:
     xgb_metrics = compute_all_metrics(y_test.values, xgb_proba, "XGBoost")
 
     # ------------------------------------------------------------------
+    # 5b. SHAP interpretability analysis for XGBoost
+    # ------------------------------------------------------------------
+    logger.info("Step 5b: SHAP analysis (XGBoost)")
+    shap_df = compute_shap_analysis(xgb_model, X_test_enc, output_dir="output")
+    logger.info("\nTop 5 features by mean |SHAP|:\n%s", shap_df.head(5).to_string(index=False))
+
+    # ------------------------------------------------------------------
     # 6. Evaluation plots + PSI demo
     # ------------------------------------------------------------------
     logger.info("Step 6/6: Generating evaluation plots")
@@ -142,7 +149,7 @@ def main() -> None:
                 iv_df[iv_df["feature"].isin(selected_features)].to_string(index=False))
 
     logger.info("\nPSI (simulated production shift): %.4f", psi_val)
-    logger.info("\nPlots saved to assets/screenshots/")
+    logger.info("\nPlots saved to assets/screenshots/ and output/")
     logger.info("Models saved to models/")
     logger.info("Training complete.")
 

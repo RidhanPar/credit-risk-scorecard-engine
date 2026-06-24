@@ -16,8 +16,12 @@ import os
 from pathlib import Path
 
 import joblib
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import shap
 from sklearn.preprocessing import OrdinalEncoder
 from xgboost import XGBClassifier
 
@@ -173,6 +177,78 @@ def predict_proba_xgb(
     X = X_raw.copy()
     X[categorical_cols] = encoder.transform(X[categorical_cols].astype(str))
     return model.predict_proba(X[feature_names])[:, 1]
+
+
+# ---------------------------------------------------------------------------
+# SHAP interpretability
+# ---------------------------------------------------------------------------
+
+def compute_shap_analysis(
+    model: XGBClassifier,
+    X_test_encoded: pd.DataFrame,
+    output_dir: str = "output",
+) -> pd.DataFrame:
+    """Compute SHAP values for the XGBoost model and save summary plots.
+
+    Uses ``shap.TreeExplainer`` for exact SHAP values (no approximation needed
+    for tree models).  Produces two plots:
+      - Beeswarm: per-sample feature impact coloured by feature value
+      - Bar: global mean |SHAP| ranking
+
+    Args:
+        model:          Fitted ``XGBClassifier``.
+        X_test_encoded: Ordinally-encoded test feature DataFrame.
+        output_dir:     Directory for saved PNG files (created if absent).
+
+    Returns:
+        pd.DataFrame: Columns ``feature`` and ``mean_abs_shap``, sorted descending.
+    """
+    out = Path(output_dir)
+    out.mkdir(parents=True, exist_ok=True)
+
+    logger.info("Computing SHAP values on %d test samples ...", len(X_test_encoded))
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X_test_encoded)
+
+    # XGBoost binary classifier: shap_values is (n_samples, n_features).
+    # Guard against versions that return a list [neg_class, pos_class] or 3-D array.
+    if isinstance(shap_values, list):
+        shap_values = shap_values[1]
+    elif isinstance(shap_values, np.ndarray) and shap_values.ndim == 3:
+        shap_values = shap_values[:, :, 1]
+
+    # --- Beeswarm plot ---
+    shap.summary_plot(shap_values, X_test_encoded, plot_type="beeswarm", show=False)
+    plt.tight_layout()
+    beeswarm_path = out / "shap_beeswarm.png"
+    plt.savefig(beeswarm_path, dpi=150, bbox_inches="tight")
+    plt.close("all")
+    logger.info("SHAP beeswarm plot saved to %s", beeswarm_path)
+
+    # --- Bar plot ---
+    shap.summary_plot(shap_values, X_test_encoded, plot_type="bar", show=False)
+    plt.tight_layout()
+    bar_path = out / "shap_bar.png"
+    plt.savefig(bar_path, dpi=150, bbox_inches="tight")
+    plt.close("all")
+    logger.info("SHAP bar plot saved to %s", bar_path)
+
+    # Top 5 by mean |SHAP|
+    mean_abs = pd.Series(
+        np.abs(shap_values).mean(axis=0),
+        index=X_test_encoded.columns,
+    ).sort_values(ascending=False)
+
+    print("\nTop 5 features by mean |SHAP| value:")
+    for feat, val in mean_abs.head(5).items():
+        print(f"  {feat:<30s}  {val:.4f}")
+
+    return (
+        mean_abs
+        .rename("mean_abs_shap")
+        .reset_index()
+        .rename(columns={"index": "feature"})
+    )
 
 
 def get_feature_importance(model_path: str = DEFAULT_MODEL_PATH) -> pd.DataFrame:

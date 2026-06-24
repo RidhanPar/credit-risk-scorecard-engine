@@ -121,6 +121,20 @@ pytest tests/ -q
 - **Logistic Scorecard** — required for regulatory compliance, adverse action letters, and applicant explainability. The points breakdown is directly auditable. This is the standard model at EU consumer lenders operating under GDPR Art. 22 and ECOA.
 - **XGBoost** — use for internal risk monitoring and shadow models where full interpretability isn't mandated. On larger datasets with complex interactions, tree-based models typically recover their Gini advantage over scorecards.
 
+### XGBoost Interpretability — SHAP Values
+
+SHAP (SHapley Additive exPlanations) decomposes each XGBoost prediction into per-feature contributions, providing model-agnostic interpretability even where regulatory explainability isn't required.
+
+![SHAP beeswarm](output/shap_beeswarm.png)
+
+*Beeswarm plot: each dot is one applicant. Horizontal position = impact on default probability; colour = feature value (red = high, blue = low). `checking_status` dominates — applicants with no checking account (high, red) receive the strongest push towards default.*
+
+![SHAP bar](output/shap_bar.png)
+
+*Bar plot: global feature importance ranked by mean |SHAP| value across all test applicants.*
+
+`checking_status` and `duration` rank as the top two features by SHAP importance, exactly mirroring their #1 and #3 positions in the WoE/IV ranking from the logistic scorecard — demonstrating that both modelling approaches converge on the same underlying credit risk drivers despite using entirely different mathematical frameworks. The engineered feature `age_per_month_credit` (age divided by loan duration) also appears in both top-5 rankings, validating that domain-driven feature construction adds signal that neither model can recover from raw attributes alone.
+
 ---
 
 ## Information Value (IV) Table — All 17 Selected Features
