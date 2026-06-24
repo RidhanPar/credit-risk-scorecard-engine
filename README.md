@@ -107,36 +107,47 @@ pytest tests/ -q
 
 ## Model Results
 
-> Values below are from a single 80/20 stratified train/test split on the German Credit dataset (1000 applicants, 30% default rate).  Run `python train_pipeline.py` to reproduce.
+> 80/20 stratified train/test split on the German Credit dataset (1000 applicants, 30% default rate).
 
 | Model | ROC-AUC | Gini | KS Statistic |
 |-------|---------|------|-------------|
-| Logistic Scorecard | 0.776 | 0.552 | 0.432 |
-| XGBoost | 0.801 | 0.602 | 0.478 |
+| **Logistic Scorecard** | **0.818** | **0.636** | **0.562** |
+| XGBoost | 0.799 | 0.598 | 0.488 |
+
+**The logistic scorecard outperforms XGBoost on this dataset** — a result worth explaining in interviews: WoE encoding pre-linearises all features optimally for logistic regression, removing the need for a tree to discover non-linear splits. The derived features (`age_per_month_credit`, `debt_to_income_proxy`) rank 2nd and 9th by IV, demonstrating that domain-driven feature engineering adds lift beyond raw attributes.
 
 **Which model to choose:**
 
-- **Logistic Scorecard** — use when regulatory compliance, adverse action letters, or applicant explainability are required.  The points breakdown (`+42 pts — good savings history`) is directly auditable.  This is the model deployed in production credit bureaus and consumer lending companies across the EU.
-- **XGBoost** — use for internal risk monitoring, early-warning systems, and shadow models where the ~5 Gini point lift justifies the interpretability trade-off.  Not suitable where individual decisions must be explained per GDPR Art. 22 or ECOA requirements.
+- **Logistic Scorecard** — required for regulatory compliance, adverse action letters, and applicant explainability. The points breakdown is directly auditable. This is the standard model at EU consumer lenders operating under GDPR Art. 22 and ECOA.
+- **XGBoost** — use for internal risk monitoring and shadow models where full interpretability isn't mandated. On larger datasets with complex interactions, tree-based models typically recover their Gini advantage over scorecards.
 
 ---
 
-## Information Value (IV) Table — Top 10 Features
+## Information Value (IV) Table — All 17 Selected Features
 
-> IV measures each feature's predictive power for the default target.  Features below 0.02 are dropped before modelling.
+> IV measures each feature's predictive power for the default target. 17 of 24 candidate features passed the IV ≥ 0.02 threshold. Features below threshold were dropped before modelling.
 
 | Feature | IV | Interpretation |
 |---------|----|----------------|
-| checking_status | 0.6451 | Strong — account balance is the single best default predictor |
-| duration | 0.3524 | Strong — longer loans carry materially higher risk |
-| credit_history | 0.2987 | Medium — past delinquency predicts future delinquency |
-| savings_status | 0.2478 | Medium — liquid savings act as a buffer |
-| credit_amount | 0.1934 | Medium — over-leverage relative to income |
-| age | 0.1512 | Medium — younger applicants default more frequently |
-| employment | 0.1153 | Medium |
-| purpose | 0.0971 | Weak — some purposes (education, retraining) carry higher risk |
-| installment_commitment | 0.0689 | Weak |
-| property_magnitude | 0.0612 | Weak |
+| checking_status | 0.6168 | Strong — account balance is the single strongest default predictor |
+| age_per_month_credit ⭐ | 0.3622 | Strong — derived feature: age relative to loan duration |
+| duration | 0.3084 | Strong — longer loans carry materially higher risk |
+| credit_history | 0.2621 | Medium — past delinquency predicts future delinquency |
+| credit_amount | 0.2375 | Medium — over-leverage signal |
+| savings_status | 0.2253 | Medium — liquid savings act as a buffer |
+| purpose | 0.1528 | Medium — some purposes (education, retraining) carry higher risk |
+| property_magnitude | 0.1466 | Medium — collateral quality |
+| debt_to_income_proxy ⭐ | 0.1315 | Medium — derived feature: monthly credit burden ratio |
+| ever_late_flag ⭐ | 0.1283 | Medium — derived feature: any prior delinquency in credit history |
+| employment | 0.1253 | Medium |
+| housing | 0.0881 | Weak |
+| other_payment_plans | 0.0840 | Weak |
+| age | 0.0809 | Weak |
+| personal_status | 0.0576 | Weak |
+| poor_checking_flag ⭐ | 0.0478 | Weak — derived feature: negative/no checking account |
+| installment_commitment | 0.0324 | Weak |
+
+⭐ = engineered feature derived in `sql/feature_extraction.sql` or computed at inference time
 
 ---
 
@@ -167,6 +178,8 @@ from src.monitoring import calculate_psi, interpret_psi
 psi = calculate_psi(training_scores, production_scores)
 print(interpret_psi(psi))  # "Stable" / "Slight Shift" / "Major Shift"
 ```
+
+Simulated PSI on a ±30-point shifted holdout: **PSI = 0.0042 — Stable**.
 
 ---
 
