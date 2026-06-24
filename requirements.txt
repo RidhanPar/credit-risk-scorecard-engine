@@ -27,9 +27,9 @@ joblib==1.4.2
 # Environment management
 python-dotenv==1.0.1
 
-# Jupyter (EDA notebook)
-notebook==7.2.1
-ipykernel==6.29.5
+# Jupyter (EDA notebook — local use only, not needed for Streamlit deployment)
+# notebook==7.2.1
+# ipykernel==6.29.5
 
 # Testing
 pytest==8.2.2
