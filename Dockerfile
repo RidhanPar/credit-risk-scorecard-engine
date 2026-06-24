@@ -25,6 +25,6 @@ EXPOSE 8501
 
 HEALTHCHECK CMD curl --fail http://localhost:${PORT:-8501}/_stcore/health || exit 1
 
-# Run training pipeline first (idempotent), then start Streamlit
+# Models are committed to git — no training step needed at container start
 # PORT env var is set automatically by Railway/Render; falls back to 8501 locally
-CMD ["sh", "-c", "python train_pipeline.py && streamlit run app/streamlit_app.py --server.port=${PORT:-8501} --server.address=0.0.0.0"]
+CMD ["sh", "-c", "streamlit run app/streamlit_app.py --server.port=${PORT:-8501} --server.address=0.0.0.0"]
