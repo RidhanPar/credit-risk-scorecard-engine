@@ -204,8 +204,10 @@ def score_applicant(
         if col not in row_df.columns:
             row_df[col] = np.nan
 
-    woe_matrix = bp.transform(row_df[all_bp_features], metric="woe")
-    woe_df = pd.DataFrame(woe_matrix, columns=all_bp_features)
+    woe_df = pd.DataFrame(
+        np.asarray(bp.transform(row_df[all_bp_features], metric="woe")),
+        columns=all_bp_features,
+    )
     X = woe_df[feature_names]
 
     log_odds = float(model.decision_function(X)[0])

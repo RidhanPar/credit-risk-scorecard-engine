@@ -276,8 +276,10 @@ def main() -> None:
     for col in all_bp_features:
         if col not in row_df.columns:
             row_df[col] = np.nan
-    woe_matrix = bp.transform(row_df[all_bp_features], metric="woe")
-    woe_series = pd.Series(woe_matrix[0], index=all_bp_features)
+    woe_series = pd.Series(
+        np.asarray(bp.transform(row_df[all_bp_features], metric="woe"))[0],
+        index=all_bp_features,
+    )
     woe_selected = woe_series[feature_names]
     contributions = get_woe_contributions(woe_selected, coefficients)
 

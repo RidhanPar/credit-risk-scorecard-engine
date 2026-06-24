@@ -141,8 +141,11 @@ def transform_woe(
         pd.DataFrame: WoE-encoded features (same row count as ``df``).
     """
     all_features = [c for c in df.columns if c not in _EXCLUDE_COLS]
-    woe_matrix = bp.transform(df[all_features], metric="woe")
-    woe_df = pd.DataFrame(woe_matrix, columns=all_features, index=df.index)
+    woe_df = pd.DataFrame(
+        np.asarray(bp.transform(df[all_features], metric="woe")),
+        columns=all_features,
+        index=df.index,
+    )
     return woe_df[selected_features]
 
 
