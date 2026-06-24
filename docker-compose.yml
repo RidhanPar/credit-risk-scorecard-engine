@@ -7,7 +7,12 @@ services:
     ports:
       - "8501:8501"
     volumes:
-      # Persist SQLite DB and trained models between container restarts
+      # Source code mounted so local edits are reflected without rebuilding
+      - ./src:/app/src
+      - ./app:/app/app
+      - ./sql:/app/sql
+      - ./train_pipeline.py:/app/train_pipeline.py
+      # Persist SQLite DB, trained models, and screenshots between restarts
       - ./data:/app/data
       - ./models:/app/models
       - ./assets:/app/assets
