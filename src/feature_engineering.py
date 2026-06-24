@@ -47,29 +47,6 @@ _CATEGORICAL_COLS = {
 
 
 # ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _infer_variable_types(df: pd.DataFrame, feature_cols: list[str]) -> list[str]:
-    """Return optbinning variable_types list ('numerical' or 'categorical').
-
-    Args:
-        df:           Feature DataFrame.
-        feature_cols: Ordered list of feature column names.
-
-    Returns:
-        list[str]: Parallel list of optbinning type strings.
-    """
-    types = []
-    for col in feature_cols:
-        if col in _CATEGORICAL_COLS or df[col].dtype == object:
-            types.append("categorical")
-        else:
-            types.append("numerical")
-    return types
-
-
-# ---------------------------------------------------------------------------
 # Fitting
 # ---------------------------------------------------------------------------
 
@@ -94,12 +71,15 @@ def fit_binning_process(
     target = df["default_flag"].values
 
     feature_cols = [c for c in df.columns if c not in _EXCLUDE_COLS]
-    variable_types = _infer_variable_types(df, feature_cols)
+    categorical_vars = [
+        col for col in feature_cols
+        if col in _CATEGORICAL_COLS or df[col].dtype == object
+    ]
 
     logger.info("Fitting BinningProcess on %d features ...", len(feature_cols))
     bp = BinningProcess(
         variable_names=feature_cols,
-        variable_types=variable_types,
+        categorical_variables=categorical_vars,
         max_n_bins=10,
         min_bin_size=0.05,
     )
