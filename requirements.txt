@@ -9,7 +9,8 @@ xgboost==2.1.1
 
 # Credit scoring (WoE / IV)
 optbinning==0.19.0
-ortools==9.6.2534   # pin: ortools 9.7+ breaks optbinning 0.19 CP-SAT optimizer
+# ortools is installed as an optbinning transitive dependency; no pin needed here
+# because cloud deployment only calls bp.transform() (not fit) so CP-SAT is never invoked
 
 # Model interpretability
 shap>=0.45.0

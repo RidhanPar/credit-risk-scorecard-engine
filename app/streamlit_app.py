@@ -155,14 +155,12 @@ def main() -> None:
     )
 
     if not models_exist():
-        with st.spinner("First run — training models (takes ~30 seconds) ..."):
-            try:
-                import train_pipeline
-                train_pipeline.main()
-                st.cache_resource.clear()
-            except Exception as exc:
-                st.error(f"Training failed: {exc}")
-                return
+        st.error(
+            "Model artefacts not found. Expected files in `models/` directory: "
+            "`binning_process.pkl`, `scorecard_model.pkl`, `xgb_model.pkl`. "
+            "Run `python train_pipeline.py` locally to generate them."
+        )
+        return
 
     bp, artefact = load_models()
     lr_model = artefact["model"]

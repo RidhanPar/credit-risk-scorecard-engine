@@ -20,7 +20,7 @@ env/
 # Data & models
 data/raw/*.csv
 data/raw/*.data
-models/*.pkl
+# models/*.pkl intentionally tracked — pre-trained artefacts for cloud deployment
 
 # SQLite database
 *.db
