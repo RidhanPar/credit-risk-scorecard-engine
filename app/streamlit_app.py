@@ -155,12 +155,14 @@ def main() -> None:
     )
 
     if not models_exist():
-        st.error(
-            "Models not found.  Please run `python train_pipeline.py` first to train "
-            "and save the model artefacts, then restart this app."
-        )
-        st.code("python train_pipeline.py", language="bash")
-        return
+        with st.spinner("First run — training models (takes ~30 seconds) ..."):
+            try:
+                import train_pipeline
+                train_pipeline.main()
+                st.cache_resource.clear()
+            except Exception as exc:
+                st.error(f"Training failed: {exc}")
+                return
 
     bp, artefact = load_models()
     lr_model = artefact["model"]
@@ -277,7 +279,7 @@ def main() -> None:
         if col not in row_df.columns:
             row_df[col] = np.nan
     woe_series = pd.Series(
-        np.asarray(bp.transform(row_df[all_bp_features], metric="woe"))[0],
+        np.asarray(bp.transform(row_df[all_bp_features].to_numpy(), metric="woe"))[0],
         index=all_bp_features,
     )
     woe_selected = woe_series[feature_names]

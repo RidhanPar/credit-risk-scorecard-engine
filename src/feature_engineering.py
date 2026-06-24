@@ -142,7 +142,7 @@ def transform_woe(
     """
     all_features = [c for c in df.columns if c not in _EXCLUDE_COLS]
     woe_df = pd.DataFrame(
-        np.asarray(bp.transform(df[all_features], metric="woe")),
+        np.asarray(bp.transform(df[all_features].to_numpy(), metric="woe")),
         columns=all_features,
         index=df.index,
     )

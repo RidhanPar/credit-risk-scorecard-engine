@@ -20,10 +20,11 @@ COPY data/ ./data/
 COPY train_pipeline.py .
 COPY .env.example .env
 
-# Expose Streamlit default port
+# Expose Streamlit default port (Railway/Render override via $PORT)
 EXPOSE 8501
 
-HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health || exit 1
+HEALTHCHECK CMD curl --fail http://localhost:${PORT:-8501}/_stcore/health || exit 1
 
 # Run training pipeline first (idempotent), then start Streamlit
-CMD ["sh", "-c", "python train_pipeline.py && streamlit run app/streamlit_app.py --server.port=8501 --server.address=0.0.0.0"]
+# PORT env var is set automatically by Railway/Render; falls back to 8501 locally
+CMD ["sh", "-c", "python train_pipeline.py && streamlit run app/streamlit_app.py --server.port=${PORT:-8501} --server.address=0.0.0.0"]

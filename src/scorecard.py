@@ -205,7 +205,7 @@ def score_applicant(
             row_df[col] = np.nan
 
     woe_df = pd.DataFrame(
-        np.asarray(bp.transform(row_df[all_bp_features], metric="woe")),
+        np.asarray(bp.transform(row_df[all_bp_features].to_numpy(), metric="woe")),
         columns=all_bp_features,
     )
     X = woe_df[feature_names]
