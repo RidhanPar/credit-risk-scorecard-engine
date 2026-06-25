@@ -497,6 +497,8 @@ def _tab_performance():
     col_roc1, col_roc2 = st.columns(2)
 
     def _roc_fig(fpr, tpr, auc_val, title, color):
+        # Convert hex colour to decimal RGB for Plotly rgba()
+        r, g, b = int(color[1:3], 16), int(color[3:5], 16), int(color[5:7], 16)
         fig = go.Figure()
         fig.add_trace(go.Scatter(
             x=[0, 1], y=[0, 1], mode="lines",
@@ -507,8 +509,7 @@ def _tab_performance():
             x=fpr, y=tpr, mode="lines",
             name=f"AUC = {auc_val:.3f}  ·  Gini = {2*auc_val-1:.3f}",
             line=dict(color=color, width=2.2),
-            fill="tozeroy", fillcolor=f"rgba({color[1:3]},{color[3:5]},{color[5:7]},0.08)"
-            if len(color) == 7 else "rgba(37,99,235,0.08)",
+            fill="tozeroy", fillcolor=f"rgba({r},{g},{b},0.08)",
         ))
         fig.update_layout(
             title=dict(text=title, font_size=13, x=0.5),
