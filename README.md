@@ -86,6 +86,43 @@ pytest tests/ -q
 
 ---
 
+## Live Demo
+
+**[🚀 Launch App on Streamlit Cloud](https://credit-risk-scorecard-engine-ridhanpar.streamlit.app)**
+
+The Streamlit app is a 5-tab credit decisioning platform built around the trained scorecard:
+
+### Tab 1 — Dataset Overview
+- Headline metrics: total applicants, default rate, feature count
+- Donut chart of Good vs Bad class distribution
+- Full IV ranking table (colour-coded: Strong / Medium / Weak)
+- WoE bin bar charts for the top 5 features by IV — green bars indicate bins with more goods than bads, red bars indicate higher-risk bins
+
+### Tab 2 — Model Performance
+- Side-by-side comparison table: Python Logistic Scorecard, Python XGBoost, R GLM Scorecard (AUC / Gini / KS)
+- Interactive Plotly ROC curves for both Python models with AUC/Gini annotation
+- Score distribution histogram (Good vs Bad) with risk tier boundary lines at 500, 600, 700
+- PSI monitoring panel: overall score PSI gauge + per-feature PSI horizontal bar chart with red/yellow/green colour coding
+
+### Tab 3 — Credit Simulator
+- 8-field input form: checking status, credit amount, duration, credit history, purpose, savings status, employment, age
+- Instant credit score (300–850), risk tier, and XGBoost P(Default) upon submission
+- Decision banner: Approved / Referred / Declined with interest rate tier
+- Feature contribution Plotly bar chart (WoE × coefficient decomposition)
+- GDPR Art. 22 adverse action letter for declined/referred applicants listing the top 3 adverse factors
+
+### Tab 4 — Explainability
+- **SHAP waterfall**: SHAP LinearExplainer waterfall plot showing per-feature contribution relative to population base rate for the submitted application
+- **LIME local explanation**: LimeTabularExplainer horizontal bar chart with top 3 locally influential features
+- Plain-English card: plain-language summary of the strongest positive and risk factors driving the decision
+
+### Tab 5 — Model Monitoring
+- **PSI gauge** with three-zone colour coding (green < 0.10, amber 0.10–0.25, red > 0.25)
+- Per-feature PSI table with row-level colour highlighting
+- Side-by-side histograms comparing score distribution between training and simulated production population
+
+---
+
 ## Screenshots
 
 ### EDA — Target Distribution
@@ -239,7 +276,7 @@ credit-risk-scorecard-engine/
 ## Future Improvements
 
 - [ ] Replace SQLite with PostgreSQL + SQLAlchemy for a scalable feature store
-- [ ] Add Shapley value (SHAP) explanations alongside WoE contributions
+- [x] Add Shapley value (SHAP) explanations alongside WoE contributions
 - [ ] Implement automated model retraining trigger when PSI > 0.25
 - [ ] Add through-the-cycle PD calibration using Platt scaling
 - [ ] Scorecard champion/challenger A/B testing framework
