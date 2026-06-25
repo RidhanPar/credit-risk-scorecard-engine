@@ -10,7 +10,6 @@ Tabs
 """
 
 import sys
-import sqlite3
 from pathlib import Path
 
 import matplotlib
@@ -94,7 +93,6 @@ BINNING_PATH = str(PROJECT_ROOT / "models" / "binning_process.pkl")
 MODEL_PATH   = str(PROJECT_ROOT / "models" / "scorecard_model.pkl")
 XGB_PATH     = str(PROJECT_ROOT / "models" / "xgb_model.pkl")
 DB_PATH      = str(PROJECT_ROOT / "data"   / "credit_risk.db")
-SQL_PATH     = str(PROJECT_ROOT / "sql"    / "feature_extraction.sql")
 
 TIER_COLOR = {"Low Risk": "#22c55e", "Medium Risk": "#f59e0b",
               "High Risk": "#f97316", "Declined":   "#ef4444"}
@@ -137,10 +135,12 @@ def _load_artefacts():
 
 @st.cache_data(show_spinner=False)
 def _raw_dataset() -> pd.DataFrame:
-    con = sqlite3.connect(DB_PATH)
-    sql = Path(SQL_PATH).read_text()
-    df  = pd.read_sql(sql, con)
-    con.close()
+    from src.data_loader import extract_features, run_data_pipeline
+    db = Path(DB_PATH)
+    # Bootstrap DB if missing or empty (e.g. first Streamlit Cloud run without committed DB)
+    if not db.exists() or db.stat().st_size < 1_000:
+        run_data_pipeline(DB_PATH)
+    df = extract_features(DB_PATH)
     return df.drop(columns=["id"], errors="ignore")
 
 

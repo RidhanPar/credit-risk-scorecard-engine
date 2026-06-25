@@ -22,8 +22,8 @@ data/raw/*.csv
 data/raw/*.data
 # models/*.pkl intentionally tracked — pre-trained artefacts for cloud deployment
 
-# SQLite database
-*.db
+# SQLite database — credit_risk.db intentionally tracked for Streamlit Cloud
+# *.db
 *.sqlite
 
 # Environment
