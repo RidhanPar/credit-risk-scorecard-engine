@@ -42,7 +42,7 @@ st.set_page_config(
     page_title="Credit Risk Decisioning Engine",
     page_icon="💳",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1030,17 +1030,32 @@ def main():
     ])
 
     with t1:
-        _tab_dataset(bp, art)
+        try:
+            _tab_dataset(bp, art)
+        except Exception as e:
+            st.error(f"Dataset tab error: {e}")
     with t2:
-        with st.spinner("Computing model metrics…"):
-            _tab_performance()
+        try:
+            with st.spinner("Computing model metrics…"):
+                _tab_performance()
+        except Exception as e:
+            st.error(f"Performance tab error: {e}")
     with t3:
-        _tab_simulator(bp, art, xgb_art)
+        try:
+            _tab_simulator(bp, art, xgb_art)
+        except Exception as e:
+            st.error(f"Simulator tab error: {e}")
     with t4:
-        _tab_explainability(art)
+        try:
+            _tab_explainability(art)
+        except Exception as e:
+            st.error(f"Explainability tab error: {e}")
     with t5:
-        with st.spinner("Computing PSI metrics…"):
-            _tab_monitoring()
+        try:
+            with st.spinner("Computing PSI metrics…"):
+                _tab_monitoring()
+        except Exception as e:
+            st.error(f"Monitoring tab error: {e}")
 
 
 if __name__ == "__main__":
