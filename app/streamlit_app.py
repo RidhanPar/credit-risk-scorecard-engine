@@ -284,45 +284,51 @@ def _iv_table(bp) -> pd.DataFrame:
     return iv_df
 
 
-def _woe_bin_data(bp, feature: str):
-    """Return DataFrame(Bin, WoE) or a diagnostic string on failure."""
+_CATEGORICAL_FEATS = {
+    "checking_status", "credit_history", "purpose", "savings_status",
+    "employment", "personal_status", "other_parties", "property_magnitude",
+    "other_payment_plans", "housing", "job", "own_telephone", "foreign_worker",
+    "ever_late_flag", "poor_checking_flag",
+}
+
+
+@st.cache_data(show_spinner=False)
+def _woe_bin_table(feature: str) -> pd.DataFrame | None:
+    """Reconstruct WoE bin table via bp.transform() on the full dataset.
+
+    Groups raw feature values by their WoE output — works on any optbinning
+    version because it only uses the public transform() API.
+    """
+    bp, art, _ = _load_artefacts()
+    df = _raw_dataset()
+    feat_names = art["feature_names"]
+
+    if feature not in feat_names or feature not in df.columns:
+        return None
+
+    all_feats = [c for c in df.columns if c not in _FEAT_EXCLUDE]
     try:
-        ob = bp.get_binning(feature)
-    except Exception as e:
-        try:                                   # fallback: internal list
-            idx = list(bp.variable_names).index(feature)
-            ob = bp._binning_list[idx]
-        except Exception:
-            return f"get_binning: {type(e).__name__}: {e}"
+        X_woe = transform_woe(df[all_feats], bp, feat_names)
+    except Exception:
+        return None
 
-    try:
-        bt = ob.binning_table
-        # Table is built during fit(); only call build() if it wasn't populated
-        t = getattr(bt, "table", None)
-        if t is None:
-            bt.build()
-            t = bt.table
-        if t is None:
-            return "table is None after build()"
+    raw = df[feature].values
+    woe = X_woe[feature].values
+    temp = pd.DataFrame({"raw": raw, "WoE": woe})
 
-        t = t.copy()
-        # Column names are capitalised in optbinning but accept any case
-        bin_col = next((c for c in t.columns if c.lower() == "bin"), None)
-        woe_col = next((c for c in t.columns if c.lower() == "woe"), None)
-        if bin_col is None or woe_col is None:
-            return f"unexpected columns: {list(t.columns)}"
+    if feature in _CATEGORICAL_FEATS:
+        t = (temp.groupby("WoE")["raw"]
+             .apply(lambda x: " / ".join(sorted(x.astype(str).unique())))
+             .reset_index()
+             .rename(columns={"raw": "Bin"}))
+    else:
+        grp = temp.groupby("WoE")["raw"].agg(["min", "max"]).reset_index()
+        grp["Bin"] = grp.apply(
+            lambda r: f"[{r['min']:.1f}, {r['max']:.1f}]", axis=1
+        )
+        t = grp[["WoE", "Bin"]]
 
-        exclude = {"Special", "Missing", "Totals", "nan"}
-        t = t[~t[bin_col].astype(str).isin(exclude)]
-        t = t[t[woe_col].notna()]
-        if len(t) == 0:
-            return "0 rows after filtering"
-
-        return (t[[bin_col, woe_col]]
-                .head(15)
-                .rename(columns={bin_col: "Bin", woe_col: "WoE"}))
-    except Exception as e:
-        return f"table access: {type(e).__name__}: {e}"
+    return t[["Bin", "WoE"]].sort_values("WoE").reset_index(drop=True)
 
 
 def _decision_info(score: int) -> tuple[str, str, str, str]:
@@ -464,13 +470,13 @@ def _tab_dataset(bp, art):
     top5 = iv_df.head(5)["Feature"].tolist()
     cols = st.columns(5)
     for i, feat in enumerate(top5):
-        result = _woe_bin_data(bp, feat)
+        t = _woe_bin_table(feat)
         with cols[i]:
-            if isinstance(result, pd.DataFrame) and len(result) > 0:
-                bar_colors = ["#22c55e" if v >= 0 else "#ef4444" for v in result["WoE"]]
+            if t is not None and len(t) > 0:
+                bar_colors = ["#22c55e" if v >= 0 else "#ef4444" for v in t["WoE"]]
                 fig = go.Figure(go.Bar(
-                    x=result["Bin"].astype(str),
-                    y=result["WoE"].round(3),
+                    x=t["Bin"].astype(str),
+                    y=t["WoE"].round(3),
                     marker_color=bar_colors,
                     hovertemplate="%{x}<br>WoE: %{y:.3f}<extra></extra>",
                 ))
@@ -484,8 +490,6 @@ def _tab_dataset(bp, art):
                     plot_bgcolor="#f8fafc",
                 )
                 st.plotly_chart(fig, use_container_width=True)
-            elif isinstance(result, str):
-                st.warning(f"**{feat}**\n\n`{result}`")
             else:
                 st.info(f"No bin data for {feat}")
 
