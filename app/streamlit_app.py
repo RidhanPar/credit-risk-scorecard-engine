@@ -50,7 +50,7 @@ st.set_page_config(
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-.block-container { padding-top: 1rem; max-width: 1200px; }
+.block-container { max-width: 1200px; }
 
 /* Metric cards */
 div[data-testid="metric-container"] {
