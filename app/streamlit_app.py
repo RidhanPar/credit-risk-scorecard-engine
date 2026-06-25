@@ -284,19 +284,45 @@ def _iv_table(bp) -> pd.DataFrame:
     return iv_df
 
 
-def _woe_bin_data(bp, feature: str) -> pd.DataFrame | None:
+def _woe_bin_data(bp, feature: str):
+    """Return DataFrame(Bin, WoE) or a diagnostic string on failure."""
     try:
         ob = bp.get_binning(feature)
-        ob.binning_table.build()
-        t = ob.binning_table.table.copy()
-        # Remove aggregate rows
+    except Exception as e:
+        try:                                   # fallback: internal list
+            idx = list(bp.variable_names).index(feature)
+            ob = bp._binning_list[idx]
+        except Exception:
+            return f"get_binning: {type(e).__name__}: {e}"
+
+    try:
+        bt = ob.binning_table
+        # Table is built during fit(); only call build() if it wasn't populated
+        t = getattr(bt, "table", None)
+        if t is None:
+            bt.build()
+            t = bt.table
+        if t is None:
+            return "table is None after build()"
+
+        t = t.copy()
+        # Column names are capitalised in optbinning but accept any case
+        bin_col = next((c for c in t.columns if c.lower() == "bin"), None)
+        woe_col = next((c for c in t.columns if c.lower() == "woe"), None)
+        if bin_col is None or woe_col is None:
+            return f"unexpected columns: {list(t.columns)}"
+
         exclude = {"Special", "Missing", "Totals", "nan"}
-        if "Bin" in t.columns:
-            t = t[~t["Bin"].astype(str).isin(exclude)]
-        t = t[t["WoE"].notna()]
-        return t[["Bin", "WoE"]].head(15) if "Bin" in t.columns else None
-    except Exception:
-        return None
+        t = t[~t[bin_col].astype(str).isin(exclude)]
+        t = t[t[woe_col].notna()]
+        if len(t) == 0:
+            return "0 rows after filtering"
+
+        return (t[[bin_col, woe_col]]
+                .head(15)
+                .rename(columns={bin_col: "Bin", woe_col: "WoE"}))
+    except Exception as e:
+        return f"table access: {type(e).__name__}: {e}"
 
 
 def _decision_info(score: int) -> tuple[str, str, str, str]:
@@ -438,13 +464,13 @@ def _tab_dataset(bp, art):
     top5 = iv_df.head(5)["Feature"].tolist()
     cols = st.columns(5)
     for i, feat in enumerate(top5):
-        t = _woe_bin_data(bp, feat)
+        result = _woe_bin_data(bp, feat)
         with cols[i]:
-            if t is not None and len(t) > 0:
-                bar_colors = ["#22c55e" if v >= 0 else "#ef4444" for v in t["WoE"]]
+            if isinstance(result, pd.DataFrame) and len(result) > 0:
+                bar_colors = ["#22c55e" if v >= 0 else "#ef4444" for v in result["WoE"]]
                 fig = go.Figure(go.Bar(
-                    x=t["Bin"].astype(str),
-                    y=t["WoE"].round(3),
+                    x=result["Bin"].astype(str),
+                    y=result["WoE"].round(3),
                     marker_color=bar_colors,
                     hovertemplate="%{x}<br>WoE: %{y:.3f}<extra></extra>",
                 ))
@@ -458,8 +484,10 @@ def _tab_dataset(bp, art):
                     plot_bgcolor="#f8fafc",
                 )
                 st.plotly_chart(fig, use_container_width=True)
+            elif isinstance(result, str):
+                st.warning(f"**{feat}**\n\n`{result}`")
             else:
-                st.info(f"Bin data unavailable for {feat}")
+                st.info(f"No bin data for {feat}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
